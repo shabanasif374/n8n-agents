@@ -1,0 +1,8 @@
+{
+  "name": "n8n-agents",
+  "version": "1.0.0",
+  "description": "Example n8n workflows",
+  "scripts": {
+    "test": "echo \"No tests configured\""
+  }
+}
