@@ -1,0 +1,113 @@
+{
+  "name": "SEO Outline from SERP",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "seo-outline",
+        "httpMethod": "POST",
+        "responseMode": "responseNode"
+      },
+      "id": 1,
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [-400, 0]
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "https://google.serper.dev/search",
+        "jsonParameters": true,
+        "bodyParametersJson": "{\"q\":\"{{$json.body.keyword}}\"}",
+        "headerParametersJson": "{\"X-API-KEY\":\"={{$env.SERPER_KEY}}\",\"Content-Type\":\"application/json\"}"
+      },
+      "id": 2,
+      "name": "SERP API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [-200, 0]
+    },
+    {
+      "parameters": {
+        "functionCode": "const keyword = $input.first().json.body.keyword;\nconst organic = items[0].json.organic || [];\nconst titles = organic.slice(0,5).map(r => '- ' + r.title).join('\\n');\nreturn [{ json: { prompt: `Using the keyword '${keyword}', and considering these existing article titles:\\n${titles}\\nCreate a detailed SEO optimized blog outline.` } }];"
+      },
+      "id": 3,
+      "name": "Create Prompt",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "jsonParameters": true,
+        "bodyParametersJson": "{\"model\":\"gpt-3.5-turbo\",\"messages\":[{\"role\":\"system\",\"content\":\"You are an SEO assistant that creates article outlines.\"},{\"role\":\"user\",\"content\":\"{{$json.prompt}}\"}]}",
+        "headerParametersJson": "{\"Authorization\":\"Bearer {{$env.OPENAI_API_KEY}}\",\"Content-Type\":\"application/json\"}"
+      },
+      "id": 4,
+      "name": "OpenAI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [200, 0]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{$json.choices[0].message.content}}"
+      },
+      "id": 5,
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [400, 0]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "SERP API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SERP API": {
+      "main": [
+        [
+          {
+            "node": "Create Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Prompt": {
+      "main": [
+        [
+          {
+            "node": "OpenAI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false
+}
